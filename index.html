@@ -1,0 +1,277 @@
+<!DOCTYPE html> 
+<html> 
+    <head> 
+    <title>App</title> 
+    <meta name="viewport" content="width=device-width, initial-scale=1"> 
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <link rel="stylesheet" href="jquery.mobile-1.1.1.min.css" />
+    <script src="jquery-1.8.2.min.js"></script>
+    <script src="jquery.mobile-1.1.1.min.js"></script>
+</head> 
+<body> 
+
+    <script>
+        $(document).ready(function() {
+            
+            //cargar recetas de Local Storage, si no hay ninguna, user predeterminadas
+            var recipies;
+            
+            if(localStorage.getItem('recipies')) {
+                recipies = JSON.parse(localStorage.getItem('recipies'));
+            }
+            else {            
+                recipies = [
+                    {
+                        id: 1,
+                        name: 'Hamburguesa con Queso',
+                        time: 5,
+                        ingredients: 'Pan, hamburguesas, queso, lechuga, tomate',
+                        preparation: 'Mezcle todo en la jueguera y sirva a gusto.',
+                        type: 'Plato de fondo'
+                    },
+                    {
+                        id: 2,
+                        name: 'Hamburguesa con Jamon',
+                        time: 15,
+                        ingredients: 'Pan, hamburguesas, jamon, lechuga, tomate',
+                        preparation: 'Mezcle todo en el horno y sirva a gusto.',
+                        type: 'Colación'
+                    },
+                    {
+                        id: 3,
+                        name: 'Torta',
+                        time: 45,
+                        ingredients: 'Azúcar, mantequilla, tomate, papaya, pollo',
+                        preparation: 'Hierva por 40 minutos y revuelva bien.',
+                        type: 'Postre'
+                    },                
+                ];
+            }
+            
+            //funcion reutilizable para agregar elementos a la lista
+            var addRecipie = function(recipieData) {
+                
+                $('#recipies_list').append('<li><a class="recipie_item" href="#item'+recipieData.id+'">'+recipieData.name+'</a></li>');      
+                $('body').append('<div id="item'+recipieData.id+'" data-role="page">\
+                    <div data-role="header"><h1>'+recipieData.name+' - ('+recipieData.type+')</h1><a href="" data-rel="back">Volver</a>\
+                    <a href="#delete'+recipieData.id+'" data-icon="delete" class="ui-btn-right delete_button">Borrar</a></div>\
+                    <div data-role="content" id="content'+recipieData.id+'">\
+                    <div data-role="collapsible" data-collapsed="false" data-theme="b"><h3>Ingredientes</h3>'+recipieData.ingredients+'</div>\
+                    <div data-role="collapsible" data-collapsed="false" data-theme="b"><h3>Preparación</h3>'+recipieData.preparation+'<br/><strong>Tiempo total:'+recipieData.time+' minutos</strong></div>\
+                    </div></div>');
+                
+                if(recipieData.location) {
+                    var img_url="http://maps.googleapis.com/maps/api/staticmap?center="+recipieData.location+"&zoom=14&size=250x200&sensor=false";
+                    $('#content'+recipieData.id).append('<div data-role="collapsible" data-collapsed="false" data-theme="b"><h3>Ubicación</h3><img src="'+img_url+'"/></div>');
+                }
+                    
+                $('#recipies_list').listview("refresh");
+            };
+            
+            //funcion que muestra las listas en la pagina de inicio
+            var showRecipies = function() {
+                //borrar contenido existente
+                $('#recipies_list').html('');
+                
+                for(var i=0; i<recipies.length; i++) {                          
+                    addRecipie(recipies[i]);
+                }
+                
+                //registrar evento para borrar receta
+                $('.delete_button').bind('click touch', function(e) {
+                    var id = $(this).attr('href').substring(7);
+                    console.log(id);
+
+                    //busquemos la posicion en el arreglo "recipies"
+                    var index;
+                    for(var i=0;i<recipies.length;i++) {
+                        if(recipies[i].id == id) {
+                            index = i;
+                            break;
+                        }
+                    }
+
+                    //eliminar receta
+                    recipies.splice(index,1);
+                    
+                    //guardar offline
+                    localStorage.setItem('recipies', JSON.stringify(recipies));
+                    
+                    //actualiza listado de recetas
+                    showRecipies();
+                    $.mobile.changePage("#homepage");
+                });
+            }
+            
+            //ejecutar al cargar el documento
+            showRecipies();
+            
+            var entityMap = {
+                "&": "&amp;",
+                "<": "&lt;",
+                ">": "&gt;",
+                '"': '&quot;',
+                "'": '&#39;',
+                "/": '&#x2F;'
+              };
+             
+            //remover caracteres de HTML y comillas
+            var escapeHTML = function (string) {
+              return String(string).replace(/[&<>"'\/]/g, function (s) {
+                return entityMap[s];
+              });
+            }
+            
+            //agregar nueva receta
+            $('#form_new_recipie').bind('submit', function(e) {
+                
+                var newRecipie = {
+                    id: recipies.length+1,
+                    name: escapeHTML($('#recipie_name').val()),
+                    time: escapeHTML($('#recipie_time').val()),
+                    ingredients: escapeHTML($('#recipie_ingredients').val()),
+                    preparation: escapeHTML($('#recipie_preparation').val()),
+                    type: escapeHTML($('#recipie_type option:selected').val()),
+                    location: escapeHTML($('#location').val())
+                };
+                //agregar receta al arreglo
+                recipies.push(newRecipie);
+                
+                //guardar offline
+                localStorage.setItem('recipies', JSON.stringify(recipies));
+                
+                //agregar receta al homepage
+                addRecipie(newRecipie);
+                
+                //limpiar formulario
+                $(this).get(0).reset();
+                $.mobile.changePage("#homepage");
+                return false;
+            });
+            
+            //guardar la receta activa
+//            var activeRecipie;
+//            $('.recipie_item').bind('click touch', function(e) {                
+//                var item = $(this).attr('href');
+//                activeRecipie = item.substring(5);
+//                console.log(activeRecipie);
+//            });
+            
+            
+            
+        });
+        
+            $(document).bind("mobileinit", function(){
+                $.mobile.ajaxLinksEnabled(false);
+            });
+        
+        $('#add_recipie').live('pageshow', function() {
+            console.log('pageshow');
+            //obtener posicion del usuario
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(function(position){
+                    //console.log(position.coords);
+                    
+                    var location=position.coords.latitude+","+position.coords.longitude;
+                    var img_url='http://maps.googleapis.com/maps/api/staticmap?center='+location+'&zoom=14&size=250x250&sensor=false';
+                    
+                    $('#map_area').html('<img src="'+img_url+'">');
+                    $('#location').val(location);
+                    
+                }, function(error) {
+                    //error      
+                    //console.log(error);
+                });                           }
+            else {
+                //el usuario no soporta geolocalizacion
+            }
+        });
+        
+        
+    </script>
+    
+<div id="homepage" data-role="page">
+
+	<div data-role="header">
+		<h1>RicasRecipies</h1>                
+	</div><!-- /header -->
+
+	<div data-role="content">	
+                
+		<a href="#add_recipie"  data-role="button" data-theme="b">Agregar Receta</a>	
+                
+                 <div style="margin:30px"></div>
+                
+                <ul id="recipies_list" data-role="listview" data-filter="true" data-filter-placeholder="Buscar receta">
+
+                </ul>
+	</div><!-- /content -->
+        <div data-role="footer" data-position="fixed">
+            <div data-role="navbar" data-iconpos="bottom" >
+                <ul >
+                    <li><a href="#" data-icon="home">Listado</a></li>                    
+                    <li><a href="#about_page" data-icon="info">Sobre RicasRecipies</a></li>
+                </ul>
+            </div>
+        </div>
+</div><!-- /page -->
+<div id="about_page" data-role="page">
+
+	<div data-role="header">
+		<h1>RicasRecipies</h1>  
+                <a href="" data-rel="back">Volver</a>
+	</div><!-- /header -->
+
+	<div data-role="content">	
+		<p>Esta app fue desarrollada como parte de un excelente curso que recomendaré a todos mis amigos.</p>		
+	</div><!-- /content -->
+        <div data-role="footer" data-position="fixed">
+            <div data-role="navbar" data-iconpos="bottom" >
+                <ul >
+                    <li><a href="#homepage" data-icon="home">Listado</a></li>                    
+                    <li><a href="#" data-icon="info">Sobre RicasRecipies</a></li>
+                </ul>
+            </div>
+        </div>
+</div><!-- /page -->
+
+
+<div id="add_recipie" data-role="page">
+        <div data-role="header">
+		<h1>Nueva Receta</h1>    
+                <a href="" data-rel="back">Volver</a>
+	</div><!-- /header -->
+        <div data-role="content">
+            <form method="post" id="form_new_recipie">
+	    	<input type="text" name="recipie_name" id="recipie_name" value="" placeholder="Nombre" required />
+                
+                <select name="recipie_type" id="recipie_type" data-native-menu="false" >
+                    <option value="Postre">Postre</option>
+                    <option value="Plato de fondo">Plato de fondo</option>
+                    <option value="Ensalada">Ensalada</option>
+                    <option value="Colación">Colación</option>
+                </select>
+                
+                <label for="slider">Tiempo preparación:</label>
+                <input type="range" name="recipie_time" id="recipie_time" value="40" min="0" max="60"/>
+                
+                <textarea name="recipie_ingredients" id="recipie_ingredients" placeholder="Ingredientes" required></textarea>
+                <textarea name="recipie_preparation" id="recipie_preparation" placeholder="Preparación" required></textarea>
+                
+                <div id="map_area"></div>
+                <input type="hidden" id="location" value="" />
+                
+                <input type="submit" value="Guardar" data-theme="b">
+            </form>
+        </div>
+        <div data-role="footer" data-position="fixed">
+            <div data-role="navbar" data-iconpos="bottom" >
+                <ul >
+                    <li><a href="#homepage" data-icon="home">Listado</a></li>                    
+                    <li><a href="#" data-icon="info">Sobre RicasRecipies</a></li>
+                </ul>
+            </div>
+        </div>
+</div>
+</body>
+</html>
